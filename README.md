@@ -6,6 +6,21 @@ A beginner-friendly personal finance web application that tracks daily expenses,
 
 ---
 
+## Summary
+
+The **AI-Based Personal Expense Predictor** is a full-stack, beginner-friendly web application designed to help users track personal spending, visualize financial habits, monitor monthly budgets, and forecast future expenses using machine learning.
+
+### Core Objectives & Highlights
+- **Track & Manage Expenses:** Log daily expenses with date, amount, category (Food, Transportation, Rent, Shopping, Education, Entertainment, Healthcare, Other), and descriptions. Supports creating, editing, deleting, and searching records with strict validation against negative or zero amounts.
+- **Interactive Visual Dashboard:** View current-month and previous-month spending metrics alongside dynamic Chart.js visualizations (category bar charts and historical trend lines).
+- **Machine Learning Expense Prediction:** Aggregates transactions by month using **Pandas** and uses a **Scikit-learn Linear Regression** model to forecast next month's total expenses. Includes safety checks that prevent unreliable predictions when fewer than two historical months exist.
+- **Budget Monitoring & Alerts:** Set and adjust a monthly budget with automated visual alerts if current spending or forecasted next-month expenses exceed the limit.
+- **Data-Driven Spending Insights:** Automatically identifies your highest-spending category and calculates month-over-month percentage changes based solely on recorded transactions.
+- **Sample vs. Real Data Isolation:** Includes a realistic 6-month pre-loaded sample dataset for safe experimentation and testing, kept strictly separate from personal transactions.
+- **Technology Stack:** Python Flask (Backend REST API), SQLite (Relational Database with parameterized queries), Pandas & NumPy (Data Aggregation), Scikit-learn (Linear Regression ML), HTML5/CSS3/JavaScript (Frontend UI), and Chart.js (Data Visualizations).
+
+---
+
 ## Project Folder Structure
 
 ```text
