@@ -1,0 +1,6 @@
+{
+  "name": "AI-Based Personal Expense Predictor",
+  "description": "A beginner-friendly personal finance dashboard and machine learning expense predictor using Linear Regression, budget monitoring, spending insights, and interactive charts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

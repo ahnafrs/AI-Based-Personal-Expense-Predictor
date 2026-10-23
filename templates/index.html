@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-Based Personal Expense Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <!-- Load Chart.js from CDN for rendering charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">AI-Based Personal Expense Predictor</div>
+    <nav class="nav-links">
+      <a href="#dashboard-section">Dashboard</a>
+      <a href="#prediction-section">ML Prediction</a>
+      <a href="#insights-section">Insights</a>
+      <a href="#expenses-section">Transactions</a>
+    </nav>
+    <div class="topbar-actions">
+      <label for="currency-select" class="sr-only">Currency</label>
+      <select id="currency-select" class="select-control">
+        <option value="EUR" selected>EUR (€)</option>
+        <option value="USD">USD ($)</option>
+        <option value="GBP">GBP (£)</option>
+        <option value="CAD">CAD (CA$)</option>
+        <option value="AUD">AUD (A$)</option>
+        <option value="JPY">JPY (¥)</option>
+        <option value="INR">INR (₹)</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Educational Notice & Dataset Mode Switcher -->
+    <section class="mode-bar">
+      <div class="mode-info">
+        <span class="mode-kicker" id="dataset-status-label">Active View: Sample Dataset (Testing Mode)</span>
+        <p class="mode-subtext">
+          Sample transactions are stored separately from your personal expenses so you can safely test the Linear Regression model.
+        </p>
+      </div>
+      <div class="mode-controls">
+        <button id="btn-mode-real" class="btn btn-secondary" type="button">My Real Expenses</button>
+        <button id="btn-mode-sample" class="btn btn-primary" type="button">Sample Data (6 Months)</button>
+        <button id="btn-reset-sample" class="btn btn-outline" type="button">Reset Sample Data</button>
+      </div>
+    </section>
+
+    <!-- Budget Alert Banner (Hidden unless budget is exceeded) -->
+    <div id="budget-warning-banner" class="alert-banner hidden" role="alert"></div>
+
+    <!-- Top KPI Cards -->
+    <section id="dashboard-section" class="kpi-grid">
+      <div class="card kpi-card">
+        <div class="kpi-label">Current Month Total (<span id="label-current-month">--</span>)</div>
+        <div class="kpi-value tabular" id="val-current-month">€0.00</div>
+        <div class="kpi-meta" id="meta-current-month">0 transactions recorded</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-label">Previous Month Total (<span id="label-prev-month">--</span>)</div>
+        <div class="kpi-value tabular" id="val-prev-month">€0.00</div>
+        <div class="kpi-meta" id="meta-mom-change">Comparison updates automatically</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-label">Predicted Next Month (<span id="label-pred-month">--</span>)</div>
+        <div class="kpi-value tabular accent-text" id="val-predicted-month">€0.00</div>
+        <div class="kpi-meta" id="meta-prediction-short">Scikit-learn Linear Regression estimate</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-label">Monthly Budget Monitor</div>
+        <div class="kpi-value tabular" id="val-remaining-budget">€0.00 left</div>
+        <form id="budget-form" class="budget-inline-form">
+          <input
+            type="number"
+            id="budget-input"
+            step="0.01"
+            min="1"
+            placeholder="Monthly budget"
+            required
+          />
+          <button type="submit" class="btn btn-small">Save Budget</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-grid">
+      <div class="card">
+        <h2 class="section-title">Spending by Category (Current Month)</h2>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card" id="prediction-section">
+        <h2 class="section-title">Historical vs. Predicted Monthly Trend (Linear Regression)</h2>
+        <div class="chart-container">
+          <canvas id="trendPredictionChart"></canvas>
+        </div>
+        <div class="prediction-explanation-box">
+          <p id="prediction-explanation-text" class="explanation-text"></p>
+          <p id="prediction-disclaimer-text" class="disclaimer-text"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Spending Insights & Recent Transactions -->
+    <section id="insights-section" class="two-col-grid">
+      <div class="card">
+        <h2 class="section-title">Data-Driven Spending Insights</h2>
+        <ul id="insights-list" class="insights-list"></ul>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Recent Transactions (Last 5)</h2>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th class="num-col">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="recent-transactions-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add / Edit Expense Form & Full Expense Management Table -->
+    <section id="expenses-section" class="two-col-asymmetric">
+      <div class="card">
+        <h2 class="section-title" id="form-title">Add New Expense</h2>
+        <form id="expense-form" novalidate>
+          <input type="hidden" id="expense-id" value="" />
+
+          <div class="form-group">
+            <label for="expense-date">Date</label>
+            <input type="date" id="expense-date" required />
+          </div>
+
+          <div class="form-group">
+            <label for="expense-amount">Amount</label>
+            <input
+              type="number"
+              id="expense-amount"
+              step="0.01"
+              min="0.01"
+              placeholder="e.g. 45.50"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="expense-category">Category</label>
+            <select id="expense-category" required>
+              <option value="Food">Food</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Rent">Rent</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Education">Education</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="expense-description">Description</label>
+            <input
+              type="text"
+              id="expense-description"
+              maxlength="120"
+              placeholder="e.g. Weekly supermarket groceries"
+              required
+            />
+          </div>
+
+          <div id="form-error" class="form-error hidden"></div>
+
+          <div class="form-actions">
+            <button type="submit" id="btn-submit-expense" class="btn btn-primary">Add Expense</button>
+            <button type="button" id="btn-cancel-edit" class="btn btn-outline hidden">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="table-header-row">
+          <h2 class="section-title">All Recorded Expenses</h2>
+          <span id="table-count-label" class="muted-text">0 records</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th class="num-col">Amount</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="all-expenses-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Educational Learning Project — AI-Based Personal Expense Predictor (Python Flask, SQLite, Pandas, Scikit-learn, Chart.js).
+      Predictions are simple linear estimates for learning purposes and not financial advice.
+    </p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
