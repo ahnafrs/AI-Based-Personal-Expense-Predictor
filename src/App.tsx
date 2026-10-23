@@ -13,6 +13,11 @@ import {
   RotateCcw,
   TrendingUp,
   HelpCircle,
+  FileText,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export type ExpenseCategory =
@@ -57,8 +62,99 @@ export const CURRENCIES: { code: CurrencyCode; symbol: string; label: string }[]
   { code: 'INR', symbol: '₹', label: 'INR (₹)' },
 ];
 
+export const README_MARKDOWN_CONTENT = `# AI-Based Personal Expense Predictor
+
+A beginner-friendly personal finance web application that tracks daily expenses, visualizes spending patterns with Chart.js, monitors monthly budgets, and predicts next month's total spending using **Scikit-learn's Linear Regression** and **Pandas**.
+
+> **Educational Disclaimer:** This application is a beginner learning project demonstrating full-stack web development and basic machine learning. It is not a production financial service or professional financial advisor. Predictions are simple statistical estimates, not guarantees.
+
+---
+
+## Summary
+
+The **AI-Based Personal Expense Predictor** is a full-stack, beginner-friendly web application designed to help users track personal spending, visualize financial habits, monitor monthly budgets, and forecast future expenses using machine learning.
+
+### Core Objectives & Highlights
+- **Track & Manage Expenses:** Log daily expenses with date, amount, category (Food, Transportation, Rent, Shopping, Education, Entertainment, Healthcare, Other), and descriptions. Supports creating, editing, deleting, and searching records with strict validation against negative or zero amounts.
+- **Interactive Visual Dashboard:** View current-month and previous-month spending metrics alongside dynamic Chart.js visualizations (category bar charts and historical trend lines).
+- **Machine Learning Expense Prediction:** Aggregates transactions by month using **Pandas** and uses a **Scikit-learn Linear Regression** model to forecast next month's total expenses. Includes safety checks that prevent unreliable predictions when fewer than two historical months exist.
+- **Budget Monitoring & Alerts:** Set and adjust a monthly budget with automated visual alerts if current spending or forecasted next-month expenses exceed the limit.
+- **Data-Driven Spending Insights:** Automatically identifies your highest-spending category and calculates month-over-month percentage changes based solely on recorded transactions.
+- **Sample vs. Real Data Isolation:** Includes a realistic 6-month pre-loaded sample dataset for safe experimentation and testing, kept strictly separate from personal transactions.
+- **Technology Stack:** Python Flask (Backend REST API), SQLite (Relational Database with parameterized queries), Pandas & NumPy (Data Aggregation), Scikit-learn (Linear Regression ML), HTML5/CSS3/JavaScript (Frontend UI), and Chart.js (Data Visualizations).
+
+---
+
+## Project Folder Structure
+
+\`\`\`text
+expense-predictor/
+│
+├── app.py                  # Main Python Flask server, SQLite database setup, and API routes
+├── predictor.py            # Pandas monthly aggregation & Scikit-learn LinearRegression logic
+├── requirements.txt        # Python package dependencies
+├── README.md               # Step-by-step setup guide, ML explanation, and troubleshooting
+├── expenses.db             # SQLite database file (created automatically when you run app.py)
+│
+├── templates/
+│   └── index.html          # Main responsive dashboard HTML template
+│
+└── static/
+    ├── style.css           # Clean, responsive dashboard CSS styling
+    └── script.js           # Frontend logic, form validation, and Chart.js visualizations
+\`\`\`
+
+---
+
+## Step-by-Step Setup Instructions (Windows & VS Code)
+
+### 1. Prerequisites
+1. Install **Python 3.10 or newer** from python.org. Check "Add python.exe to PATH" during installation.
+2. Install **Visual Studio Code (VS Code)**.
+
+### 2. Create & Activate Virtual Environment
+\`\`\`powershell
+python -m venv venv
+.\\venv\\Scripts\\Activate.ps1
+\`\`\`
+
+### 3. Install Required Dependencies
+\`\`\`powershell
+pip install -r requirements.txt
+\`\`\`
+
+### 4. Run the Application
+\`\`\`powershell
+python app.py
+\`\`\`
+
+### 5. Open in Your Browser
+Visit http://127.0.0.1:5000 in Chrome, Edge, or Firefox.
+
+---
+
+## Understanding the Machine Learning Model (predictor.py)
+
+### How Linear Regression Works Here
+1. **Monthly Aggregation (Pandas):** Daily expenses are grouped by month (YYYY-MM) and summed into monthly totals.
+2. **Inputs (X):** Sequential month numbers [[1], [2], ..., [N]].
+3. **Target (y):** Total amount spent in each corresponding month.
+4. **Fitting the Line:** Scikit-learn calculates y = (slope * month_index) + intercept.
+5. **Prediction:** Evaluates month N + 1 using the fitted trend line.
+
+### Limitations of This Model
+- Requires at least 2 distinct months of historical data.
+- Assumes a linear trend; does not account for irregular seasonal spikes.
+- Predictions are planning estimates, not guaranteed outcomes.
+
+---
+
+## Basic Testing Instructions & Common Troubleshooting
+1. Verify Sample Data: Test historical month metrics and forecast point.
+2. Form Validation: Ensure negative or zero amounts are rejected.
+3. Budget Alerts: Test warnings when expenses exceed monthly limits.`;
+
 // Clearly labelled 6-month Sample Dataset (May 2026 – October 2026)
-// Stored separately from real user transactions
 const DEFAULT_SAMPLE_EXPENSES: ExpenseRecord[] = [
   // May 2026 (Total: 1420.00)
   { id: 101, date: '2026-05-01', amount: 850.0, category: 'Rent', description: 'Monthly apartment rent', isSample: true },
@@ -162,7 +258,6 @@ function runLinearRegressionPrediction(expenses: ExpenseRecord[]) {
     };
   }
 
-  // X = [1, 2, ..., n], y = [total_1, total_2, ..., total_n]
   const X = sortedMonths.map((_, idx) => idx + 1);
   const y = sortedMonths.map((m) => monthMap[m]);
 
@@ -185,7 +280,6 @@ function runLinearRegressionPrediction(expenses: ExpenseRecord[]) {
   const slope = Number(rawSlope.toFixed(2));
   const intercept = Number(rawIntercept.toFixed(2));
 
-  // Compute next calendar month label after the last month
   const [lastYear, lastMonth] = sortedMonths[n - 1].split('-').map(Number);
   const nextYear = lastMonth === 12 ? lastYear + 1 : lastYear;
   const nextMonthNum = lastMonth === 12 ? 1 : lastMonth + 1;
@@ -233,10 +327,10 @@ function runLinearRegressionPrediction(expenses: ExpenseRecord[]) {
 }
 
 export default function App() {
-  // Active tab navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'prediction' | 'transactions'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'prediction' | 'transactions'>('dashboard');
+  const [showReadmeDetails, setShowReadmeDetails] = useState<boolean>(true);
+  const [copiedReadme, setCopiedReadme] = useState<boolean>(false);
 
-  // Separate states for Sample Data vs Real User Data
   const [datasetMode, setDatasetMode] = useState<'sample' | 'real'>(() => {
     const saved = localStorage.getItem('ep_dataset_mode');
     return saved === 'real' ? 'real' : 'sample';
@@ -266,7 +360,6 @@ export default function App() {
     return [];
   });
 
-  // Currency (EUR default) & Monthly Budget
   const [currency, setCurrency] = useState<CurrencyCode>(() => {
     const saved = localStorage.getItem('ep_currency') as CurrencyCode;
     return CURRENCIES.some((c) => c.code === saved) ? saved : 'EUR';
@@ -280,8 +373,6 @@ export default function App() {
 
   const [budgetInput, setBudgetInput] = useState<string>(String(monthlyBudget));
   const [budgetFeedback, setBudgetFeedback] = useState<string | null>(null);
-
-  // Category chart scope toggle
   const [categoryScope, setCategoryScope] = useState<'current' | 'all'>('current');
 
   // Expense Form State
@@ -297,7 +388,6 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Persist to localStorage
   useEffect(() => {
     localStorage.setItem('ep_dataset_mode', datasetMode);
   }, [datasetMode]);
@@ -318,7 +408,6 @@ export default function App() {
     localStorage.setItem('ep_monthly_budget', String(monthlyBudget));
   }, [monthlyBudget]);
 
-  // Active dataset
   const activeExpenses = useMemo(() => {
     const list = datasetMode === 'sample' ? sampleExpenses : realExpenses;
     return [...list].sort((a, b) => {
@@ -336,6 +425,12 @@ export default function App() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  const handleCopyReadme = () => {
+    navigator.clipboard.writeText(README_MARKDOWN_CONTENT);
+    setCopiedReadme(true);
+    setTimeout(() => setCopiedReadme(false), 2000);
   };
 
   // Compute Dashboard Summary, Insights, and Prediction
@@ -392,7 +487,6 @@ export default function App() {
     }
 
     const prediction = runLinearRegressionPrediction(activeExpenses);
-
     const remainingBudget = Number((monthlyBudget - currentMonthTotal).toFixed(2));
     const actualExceedsBudget = currentMonthTotal > monthlyBudget;
     const predictedExceedsBudget =
@@ -400,7 +494,6 @@ export default function App() {
       prediction.predictedAmount !== null &&
       prediction.predictedAmount > monthlyBudget;
 
-    // Build data-driven insights strictly supported by available records
     const observations: string[] = [];
     let highestCategory: { name: ExpenseCategory; amount: number; sharePct: number } | null = null;
     let momDiff: number | null = null;
@@ -832,9 +925,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900">
-      {/* Top Bar Contract: 3 zones separated by gap-8 */}
+      {/* Top Bar */}
       <header className="flex items-center justify-between gap-8 px-6 py-4 bg-white border-b border-slate-200 sticky top-0 z-20">
-        {/* Zone 1: Single text element wordmark */}
         <a
           href="#top"
           onClick={(e) => {
@@ -846,7 +938,6 @@ export default function App() {
           AI-Based Personal Expense Predictor
         </a>
 
-        {/* Zone 2: Concise single-line text navigation links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
           <button
             type="button"
@@ -858,6 +949,17 @@ export default function App() {
             }`}
           >
             Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('summary')}
+            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 cursor-pointer pb-0.5 ${
+              activeTab === 'summary'
+                ? 'text-slate-900 underline underline-offset-8 decoration-2 decoration-slate-900'
+                : ''
+            }`}
+          >
+            Summary & README
           </button>
           <button
             type="button"
@@ -883,7 +985,6 @@ export default function App() {
           </button>
         </nav>
 
-        {/* Zone 3: 1 primary control (Currency selector, default EUR) */}
         <div className="flex items-center gap-3 shrink-0">
           <label htmlFor="currency-picker" className="text-xs text-slate-500 whitespace-nowrap hidden sm:inline">
             Currency:
@@ -916,6 +1017,15 @@ export default function App() {
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('summary')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap shrink-0 ${
+            activeTab === 'summary' ? 'bg-slate-900 text-white' : 'text-slate-600'
+          }`}
+        >
+          Summary & README
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('prediction')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap shrink-0 ${
             activeTab === 'prediction' ? 'bg-slate-900 text-white' : 'text-slate-600'
@@ -936,7 +1046,7 @@ export default function App() {
 
       {/* Main Content Container */}
       <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Workspace Toolbar: Dataset Mode Switcher (Sample Data vs Real User Data) */}
+        {/* Workspace Toolbar: Dataset Mode Switcher */}
         <section className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -1003,7 +1113,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* Budget Exceeded Warning Banner (paired with explicit icon + text for accessibility) */}
+        {/* Budget Exceeded Warning Banner */}
         {(dashboardData.actualExceedsBudget || dashboardData.predictedExceedsBudget) && (
           <section
             role="alert"
@@ -1045,9 +1155,8 @@ export default function App() {
           </section>
         )}
 
-        {/* 4-Column KPI Row */}
+        {/* 4-Column KPI Row (Summary KPIs) */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Current Month Total */}
           <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-1.5">
             <div className="text-xs font-medium text-slate-500">
               Current Month Total ({dashboardData.currentMonth})
@@ -1067,7 +1176,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 2: Previous Month Total */}
           <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-1.5">
             <div className="text-xs font-medium text-slate-500">
               Previous Month Total ({dashboardData.prevMonth})
@@ -1093,7 +1201,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 3: Predicted Next Month */}
           <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-1.5">
             <div className="text-xs font-medium text-slate-500">
               Predicted Next Month (
@@ -1121,7 +1228,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 4: Monthly Budget Monitor */}
           <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-2">
             <div className="flex items-center justify-between text-xs font-medium text-slate-500">
               <span>Monthly Budget Monitor</span>
@@ -1159,95 +1265,184 @@ export default function App() {
           </div>
         </section>
 
+        {/* ## Summary & README File Documentation Section (Directly under the Summary KPIs) */}
+        {(activeTab === 'dashboard' || activeTab === 'summary') && (
+          <section className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-700" />
+                  ## Summary & README File
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Project overview, architecture specifications, and complete README file documentation
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyReadme}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 cursor-pointer"
+                >
+                  {copiedReadme ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy README.md</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReadmeDetails(!showReadmeDetails)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded cursor-pointer"
+                >
+                  <span>{showReadmeDetails ? 'Hide Full README' : 'View Full README'}</span>
+                  {showReadmeDetails ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Structured Summary */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-900">## Summary</h3>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                The <strong>AI-Based Personal Expense Predictor</strong> is a full-stack, beginner-friendly web application designed to help users track personal spending, visualize financial habits, monitor monthly budgets, and forecast future expenses using machine learning.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-md">
+                  <h4 className="text-xs font-semibold text-slate-900 mb-1">Expense Tracking</h4>
+                  <p className="text-[11px] text-slate-600">
+                    Full CRUD support with 8 standard categories, date & amount validation, and search/filter.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-md">
+                  <h4 className="text-xs font-semibold text-slate-900 mb-1">ML Expense Prediction</h4>
+                  <p className="text-[11px] text-slate-600">
+                    Monthly aggregation via Pandas + Scikit-learn Linear Regression straight-line forecast.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-md">
+                  <h4 className="text-xs font-semibold text-slate-900 mb-1">Budget Monitoring</h4>
+                  <p className="text-[11px] text-slate-600">
+                    Configurable monthly limit with real-time alerts when actual or predicted spending exceeds budget.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Complete README File below the summary */}
+            {showReadmeDetails && (
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+                  <span>README.md file contents (under summary)</span>
+                </div>
+                <div className="p-4 bg-slate-900 text-slate-100 rounded-md text-xs font-mono overflow-x-auto max-h-[460px] leading-relaxed">
+                  <pre className="whitespace-pre-wrap">{README_MARKDOWN_CONTENT}</pre>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Category Bar Chart */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Spending by Category
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Breakdown across the 8 standard expense categories
-                </p>
+        {activeTab !== 'summary' && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Spending by Category
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Breakdown across the 8 standard expense categories
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryScope('current')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      categoryScope === 'current'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {dashboardData.currentMonth} Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryScope('all')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      categoryScope === 'all'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    All Months
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setCategoryScope('current')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                    categoryScope === 'current'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {dashboardData.currentMonth} Only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategoryScope('all')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                    categoryScope === 'all'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  All Months
-                </button>
+
+              <div className="h-[260px] w-full relative">
+                <canvas ref={categoryCanvasRef} />
               </div>
-            </div>
 
-            <div className="h-[260px] w-full relative">
-              <canvas ref={categoryCanvasRef} />
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-              <span>
-                Top Category ({categoryScope === 'current' ? dashboardData.currentMonth : 'All'}):{' '}
-                <strong className="text-slate-900">
-                  {dashboardData.highestCategory ? dashboardData.highestCategory.name : 'N/A'}
-                </strong>
-              </span>
-              {dashboardData.highestCategory && (
-                <span className="font-mono">
-                  {formatMoney(dashboardData.highestCategory.amount)} (
-                  {dashboardData.highestCategory.sharePct}%)
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                <span>
+                  Top Category ({categoryScope === 'current' ? dashboardData.currentMonth : 'All'}):{' '}
+                  <strong className="text-slate-900">
+                    {dashboardData.highestCategory ? dashboardData.highestCategory.name : 'N/A'}
+                  </strong>
                 </span>
-              )}
+                {dashboardData.highestCategory && (
+                  <span className="font-mono">
+                    {formatMoney(dashboardData.highestCategory.amount)} (
+                    {dashboardData.highestCategory.sharePct}%)
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Historical vs Predicted Monthly Spending Trend */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between space-y-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Historical vs. Predicted Monthly Trend
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Actual monthly totals and Ordinary Least Squares Linear Regression line
+            <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Historical vs. Predicted Monthly Trend
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Actual monthly totals and Ordinary Least Squares Linear Regression line
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-blue-700">
+                  LinearRegression
+                </span>
+              </div>
+
+              <div className="h-[260px] w-full relative">
+                <canvas ref={trendCanvasRef} />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                <p className="text-xs text-slate-800 leading-relaxed">
+                  {dashboardData.prediction.explanation}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {dashboardData.prediction.disclaimer}
                 </p>
               </div>
-              <span className="text-xs font-mono text-blue-700">
-                LinearRegression
-              </span>
             </div>
-
-            <div className="h-[260px] w-full relative">
-              <canvas ref={trendCanvasRef} />
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 space-y-1.5">
-              <p className="text-xs text-slate-800 leading-relaxed">
-                {dashboardData.prediction.explanation}
-              </p>
-              <p className="text-[11px] text-slate-500">
-                {dashboardData.prediction.disclaimer}
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Detailed ML Explanation & Feature Table */}
         {activeTab === 'prediction' && (
@@ -1300,7 +1495,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Aggregated Monthly Training Table */}
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-slate-900">
                 Monthly Training Data Used for Linear Regression
@@ -1356,333 +1550,342 @@ export default function App() {
         )}
 
         {/* Spending Insights & Recent Transactions */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Data-Driven Spending Insights */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">
-                Spending Insights & Observations
-              </h2>
-              <p className="text-xs text-slate-500">
-                Calculated directly from your recorded transactions without unsupported assumptions
-              </p>
-            </div>
-
-            <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
-              {dashboardData.observations.map((obs, idx) => (
-                <li
-                  key={idx}
-                  className="p-3 bg-slate-50 border border-slate-200/80 rounded-md"
-                >
-                  {obs}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Recent 5 Transactions */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between">
+        {activeTab !== 'summary' && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
-                  Recent Transactions
+                  Spending Insights & Observations
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Latest 5 entries recorded in the active dataset
+                  Calculated directly from your recorded transactions without unsupported assumptions
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('transactions')}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap cursor-pointer"
-              >
-                View all ({activeExpenses.length})
-              </button>
+
+              <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
+                {dashboardData.observations.map((obs, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 bg-slate-50 border border-slate-200/80 rounded-md"
+                  >
+                    {obs}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-2 px-2 font-medium">Date</th>
-                    <th className="py-2 px-2 font-medium">Category</th>
-                    <th className="py-2 px-2 font-medium">Description</th>
-                    <th className="py-2 px-2 font-medium text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {activeExpenses.slice(0, 5).length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-slate-500">
-                        No transactions recorded yet. Use the form below to log your first expense.
-                      </td>
+            <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Recent Transactions
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Latest 5 entries recorded in the active dataset
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('transactions')}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap cursor-pointer"
+                >
+                  View all ({activeExpenses.length})
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="py-2 px-2 font-medium">Date</th>
+                      <th className="py-2 px-2 font-medium">Category</th>
+                      <th className="py-2 px-2 font-medium">Description</th>
+                      <th className="py-2 px-2 font-medium text-right">Amount</th>
                     </tr>
-                  ) : (
-                    activeExpenses.slice(0, 5).map((exp) => (
-                      <tr key={exp.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-2 font-mono tabular-nums text-slate-600 whitespace-nowrap">
-                          {exp.date}
-                        </td>
-                        <td className="py-2.5 px-2 text-slate-700 whitespace-nowrap">
-                          {exp.category}
-                        </td>
-                        <td className="py-2.5 px-2 text-slate-900 truncate max-w-[180px]">
-                          {exp.description}
-                        </td>
-                        <td className="py-2.5 px-2 text-right font-mono tabular-nums font-medium text-slate-900 whitespace-nowrap">
-                          {formatMoney(exp.amount)}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeExpenses.slice(0, 5).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-slate-500">
+                          No transactions recorded yet. Use the form below to log your first expense.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      activeExpenses.slice(0, 5).map((exp) => (
+                        <tr key={exp.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-2 font-mono tabular-nums text-slate-600 whitespace-nowrap">
+                            {exp.date}
+                          </td>
+                          <td className="py-2.5 px-2 text-slate-700 whitespace-nowrap">
+                            {exp.category}
+                          </td>
+                          <td className="py-2.5 px-2 text-slate-900 truncate max-w-[180px]">
+                            {exp.description}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-mono tabular-nums font-medium text-slate-900 whitespace-nowrap">
+                            {formatMoney(exp.amount)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Expense Management Section: Add/Edit Form + Full Filterable Table */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left 4 Columns: Add / Edit Expense Form */}
-          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">
-                {editingId !== null ? 'Edit Expense Record' : 'Add New Expense'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Adding to:{' '}
-                <span className="font-medium text-slate-700">
-                  {datasetMode === 'sample' ? 'Sample Dataset' : 'My Real Expenses'}
-                </span>
-              </p>
-            </div>
-
-            <form onSubmit={handleExpenseSubmit} className="space-y-3.5" noValidate>
-              <div>
-                <label
-                  htmlFor="input-date"
-                  className="block text-xs font-medium text-slate-700 mb-1"
-                >
-                  Date
-                </label>
-                <input
-                  id="input-date"
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="input-amount"
-                  className="block text-xs font-medium text-slate-700 mb-1"
-                >
-                  Amount ({currencySymbol})
-                </label>
-                <input
-                  id="input-amount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  placeholder="e.g. 42.50"
-                  className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="input-category"
-                  className="block text-xs font-medium text-slate-700 mb-1"
-                >
-                  Category
-                </label>
-                <select
-                  id="input-category"
-                  value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value as ExpenseCategory)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="input-desc"
-                  className="block text-xs font-medium text-slate-700 mb-1"
-                >
-                  Description
-                </label>
-                <input
-                  id="input-desc"
-                  type="text"
-                  maxLength={120}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="e.g. Supermarket weekly groceries"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                />
-              </div>
-
-              {formError && (
-                <div
-                  role="alert"
-                  className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-red-700"
-                >
-                  {formError}
-                </div>
-              )}
-
-              {formSuccess && (
-                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800">
-                  {formSuccess}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="submit"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {editingId !== null ? 'Update Expense' : 'Add Expense'}
-                </button>
-
-                {editingId !== null && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 whitespace-nowrap cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          {/* Right 8 Columns: Full Expense Table with Category Filter & Search */}
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {activeTab !== 'summary' && (
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-4 bg-white border border-slate-200 rounded-lg p-5 space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
-                  All Expenses ({filteredExpenses.length})
+                  {editingId !== null ? 'Edit Expense Record' : 'Add New Expense'}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Edit or delete any transaction; charts and ML predictions update immediately
+                  Adding to:{' '}
+                  <span className="font-medium text-slate-700">
+                    {datasetMode === 'sample' ? 'Sample Dataset' : 'My Real Expenses'}
+                  </span>
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search description or YYYY-MM..."
-                  aria-label="Search expenses"
-                  className="px-3 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  aria-label="Filter by category"
-                  className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
-                >
-                  <option value="All">All Categories</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <form onSubmit={handleExpenseSubmit} className="space-y-3.5" noValidate>
+                <div>
+                  <label
+                    htmlFor="input-date"
+                    className="block text-xs font-medium text-slate-700 mb-1"
+                  >
+                    Date
+                  </label>
+                  <input
+                    id="input-date"
+                    type="date"
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="input-amount"
+                    className="block text-xs font-medium text-slate-700 mb-1"
+                  >
+                    Amount ({currencySymbol})
+                  </label>
+                  <input
+                    id="input-amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    placeholder="e.g. 42.50"
+                    className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="input-category"
+                    className="block text-xs font-medium text-slate-700 mb-1"
+                  >
+                    Category
+                  </label>
+                  <select
+                    id="input-category"
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value as ExpenseCategory)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="input-desc"
+                    className="block text-xs font-medium text-slate-700 mb-1"
+                  >
+                    Description
+                  </label>
+                  <input
+                    id="input-desc"
+                    type="text"
+                    maxLength={120}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="e.g. Supermarket weekly groceries"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    required
+                  />
+                </div>
+
+                {formError && (
+                  <div
+                    role="alert"
+                    className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-red-700"
+                  >
+                    {formError}
+                  </div>
+                )}
+
+                {formSuccess && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800">
+                    {formSuccess}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {editingId !== null ? 'Update Expense' : 'Add Expense'}
+                  </button>
+
+                  {editingId !== null && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 whitespace-nowrap cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
             </div>
 
-            <div className="overflow-x-auto max-h-[420px] border border-slate-200 rounded-md">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-slate-50 sticky top-0 border-b border-slate-200 text-slate-600">
-                  <tr>
-                    <th className="py-2.5 px-3 font-semibold">Date</th>
-                    <th className="py-2.5 px-3 font-semibold">Category</th>
-                    <th className="py-2.5 px-3 font-semibold">Description</th>
-                    <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
-                    <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredExpenses.length === 0 ? (
+            <div className="lg:col-span-8 bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    All Expenses ({filteredExpenses.length})
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Edit or delete any transaction; charts and ML predictions update immediately
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search description or YYYY-MM..."
+                    aria-label="Search expenses"
+                    className="px-3 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    aria-label="Filter by category"
+                    className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="All">All Categories</option>
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto max-h-[420px] border border-slate-200 rounded-md">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-50 sticky top-0 border-b border-slate-200 text-slate-600">
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-500">
-                        No matching expenses found in this view.
-                      </td>
+                      <th className="py-2.5 px-3 font-semibold">Date</th>
+                      <th className="py-2.5 px-3 font-semibold">Category</th>
+                      <th className="py-2.5 px-3 font-semibold">Description</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
                     </tr>
-                  ) : (
-                    filteredExpenses.map((exp) => (
-                      <tr
-                        key={exp.id}
-                        className={`hover:bg-slate-50 transition-colors ${
-                          editingId === exp.id ? 'bg-blue-50/50' : ''
-                        }`}
-                      >
-                        <td className="py-2.5 px-3 font-mono tabular-nums text-slate-600 whitespace-nowrap">
-                          {exp.date}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
-                          {exp.category}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-900">{exp.description}</td>
-                        <td className="py-2.5 px-3 text-right font-mono tabular-nums font-medium text-slate-900 whitespace-nowrap">
-                          {formatMoney(exp.amount)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(exp)}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-100 cursor-pointer"
-                              title="Edit expense"
-                            >
-                              <Pencil className="w-3 h-3" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteExpense(exp.id)}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-white border border-slate-200 rounded hover:bg-red-50 cursor-pointer"
-                              title="Delete expense"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Delete
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredExpenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-500">
+                          No matching expenses found in this view.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredExpenses.map((exp) => (
+                        <tr
+                          key={exp.id}
+                          className={`hover:bg-slate-50 transition-colors ${
+                            editingId === exp.id ? 'bg-blue-50/50' : ''
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-mono tabular-nums text-slate-600 whitespace-nowrap">
+                            {exp.date}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                            {exp.category}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-900">{exp.description}</td>
+                          <td className="py-2.5 px-3 text-right font-mono tabular-nums font-medium text-slate-900 whitespace-nowrap">
+                            {formatMoney(exp.amount)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEdit(exp)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-100 cursor-pointer"
+                                title="Edit expense"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExpense(exp.id)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-white border border-slate-200 rounded hover:bg-red-50 cursor-pointer"
+                                title="Delete expense"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
-      {/* Quiet Educational Footer */}
+      {/* Educational Footer */}
       <footer className="border-t border-slate-200 bg-white py-5 px-6 mt-8">
         <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>
             Educational Learning Project · AI-Based Personal Expense Predictor · Not a production financial service.
           </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab(activeTab === 'summary' ? 'dashboard' : 'summary')}
+            className="text-slate-700 hover:text-slate-900 underline underline-offset-4 cursor-pointer whitespace-nowrap"
+          >
+            {activeTab === 'summary'
+              ? 'Return to Dashboard'
+              : 'View ## Summary & Full README Documentation'}
+          </button>
         </div>
       </footer>
     </div>

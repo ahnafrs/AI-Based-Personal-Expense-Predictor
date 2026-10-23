@@ -119,3 +119,18 @@ When you load the 6-month Sample Dataset:
 - **Requires at least 2 months of data:** A straight line cannot be drawn from a single point. If you have 0 or 1 month of expenses, the app gracefully explains that more history is required instead of guessing.
 - **Assumes a linear trend:** Linear regression assumes your spending rises or falls at a steady monthly rate. It does not automatically know about one-time annual expenses (like holiday travel or tuition) unless they are reflected in the trend.
 - **Estimates, not guarantees:** Always treat predictions as helpful planning estimates rather than certainties.
+
+---
+
+## Basic Testing Instructions & Common Troubleshooting
+
+### Testing Checklist
+1. **Sample Data Verification:** Launch the app in Sample Data mode. Confirm that historical monthly totals are calculated and the next month prediction is displayed.
+2. **Input Validation:** Try adding an expense with an amount of `0` or `-50`, or leaving required fields blank. Confirm that the validation error prevents invalid data.
+3. **Budget Warnings:** Set the monthly budget to a value lower than the current month total to test the alert banner.
+4. **Insufficient Data Handling:** Clear transactions or log only 1 month to verify that the app shows a helpful notice instead of an inaccurate prediction.
+
+### Troubleshooting
+- **Missing packages:** Run `pip install -r requirements.txt` inside your activated virtual environment.
+- **Port already in use:** If port 5000 is occupied, change the port in `app.py` (e.g., `app.run(port=5001)`).
+
